@@ -30,26 +30,12 @@ dotENV.config();
 const port = process.env.PORT || 3001;
 const secret = process.env.SECRET_KEY;
 
-const allowedOrigins = [
-  'https://erp-app-frontend.vercel.app',
-  'https://erp-app-frontend-fo24izlez-kalyan-mothukuris-projects.vercel.app'
-];
-
 const app = express()
 app.use(express.json())
-app.use(cors())
-
-// app.use(cors({
-//   origin: function (origin, callback) {
-//     if (!origin || allowedOrigins.includes(origin)) {
-//       callback(null, true);
-//     } else {
-//       callback(new Error('Not allowed by CORS: ' + origin));
-//     }
-//   },
-//   credentials: true
-// }));
-
+app.use(cors({
+  origin: 'https://erp-app-frontend-fo24izlez-kalyan-mothukuris-projects.vercel.app',
+  credentials: true, // Only if using cookies/sessions
+}));
 app.use(bodyParser.json());
 
 app.use('/uploads', express.static('uploads'));
