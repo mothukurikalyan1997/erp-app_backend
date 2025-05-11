@@ -30,12 +30,26 @@ dotENV.config();
 const port = process.env.PORT || 3001;
 const secret = process.env.SECRET_KEY;
 
+const allowedOrigins = [
+  'https://erp-app-frontend.vercel.app',
+  'https://erp-app-frontend-fo24izlez-kalyan-mothukuris-projects.vercel.app'
+];
+
 const app = express()
 app.use(express.json())
-app.use(cors({
-  origin: 'https://erp-app-frontend-fo24izlez-kalyan-mothukuris-projects.vercel.app',
-  credentials: true, // Only if using cookies/sessions
-}));
+app.use(cors())
+
+// app.use(cors({
+//   origin: function (origin, callback) {
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error('Not allowed by CORS: ' + origin));
+//     }
+//   },
+//   credentials: true
+// }));
+
 app.use(bodyParser.json());
 
 app.use('/uploads', express.static('uploads'));
@@ -994,14 +1008,14 @@ app.post('/invoices', (req, res) => {
   const company_id = req.headers.company_id;
   const token = req.headers.authorization.split(" ")[1];
 
-  const {invoice_number,customer_name,date,from_date,to_date,due_date,status,vat_percent,amount,paid_on,payment_account,items,} = req.body;
-
+  const { invoice_number, customer_name, date, from_date, to_date, due_date, status, amount, items } = req.body;
+  // Insert into invoices table
   const invoiceQuery = `
     INSERT INTO invoices 
-    (invoice_number, customer_name, date, from_date, to_date, due_date, status, vat_percent, amount, paid_on, payment_account,company_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+    (invoice_number, customer_name, date, from_date, to_date, due_date, status, amount, paid_on,payment_account, company_id)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?)
   `;
-
+  
   db.query(invoiceQuery, [
     invoice_number,
     customer_name,
@@ -1010,25 +1024,33 @@ app.post('/invoices', (req, res) => {
     to_date,
     due_date,
     status,
-    vat_percent,
     amount,
-    paid_on || null,
-    status === 'paid' ? payment_account : null,
+    null,
+    null,
     company_id
   ], (err, result) => {
     if (err) return res.status(500).json({ error: err });
 
     const invoiceId = result.insertId;
 
+    // Insert items into the invoice_items table
     const itemQuery = `
-      INSERT INTO invoice_items (invoice_id, product, quantity, price,company_id)
+      INSERT INTO invoice_items (invoice_id, product, quantity, price, vat, total, company_id)
       VALUES ?
     `;
-
-    const itemValues = items.map(item => [invoiceId, item.product, item.quantity, item.price,company_id]);
+    const itemValues = items.map(item => [
+      invoiceId, 
+      item.product, 
+      item.quantity, 
+      item.price, 
+      item.vat, 
+      item.total, 
+      company_id
+    ]);
 
     db.query(itemQuery, [itemValues], (err2) => {
       if (err2) return res.status(500).json({ error: err2 });
+      
       return res.json({ success: true, invoiceId });
     });
   });
@@ -1093,6 +1115,20 @@ app.get('/invoices/:id', (req, res) => {
 
 
 
+app.get('/ProfileData', async (req, res) => {
+        const email = req.headers.email;
+      const role = req.headers.role;
+      const company_id = req.headers.company_id;
+      const token = req.headers.authorization.split(" ")[1];
+      
+      const q = `SELECT * FROM company_profiles where company_id = ${company_id}`;
+      db.query(q,(err,data)=>{
+          if(err) return res.json(err)
+          return res.json(data)
+      })
+
+});
+
 // app.get('/invoices/:id', async (req, res) => {
 //   try {
 //     const [[invoice]] = await db.query('SELECT * FROM invoices WHERE id = ?', [req.params.id]);
@@ -1104,19 +1140,35 @@ app.get('/invoices/:id', (req, res) => {
 // });
 
 // ✅ Delete invoice
-app.delete('/invoices/:id', async (req, res) => {
+app.delete('/invoices/:id', (req, res) => {
   const email = req.headers.email;
   const role = req.headers.role;
   const company_id = req.headers.company_id;
-  const token = req.headers.authorization.split(" ")[1];
+  const token = req.headers.authorization?.split(" ")[1];
 
-  try {
-    await db.query(`DELETE FROM invoices WHERE id = ? company_id = ${company_id}`, [req.params.id]);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to delete invoice' });
-  }
-});
+  const query1 = `DELETE FROM invoice_items WHERE invoice_id = ? AND company_id = ?`;
+  const query2 = `DELETE FROM invoices WHERE id = ? AND company_id = ?`;
+
+  db.query(query1, [req.params.id, company_id], (err1, result1) => {
+    if (err1) {
+      console.error('Error deleting invoice items:', err1);
+      return res.status(500).json({ error: 'Failed to delete invoice items' });
+    }
+
+    db.query(query2, [req.params.id, company_id], (err2, result2) => {
+      if (err2) {
+        console.error('Error deleting invoice:', err2);
+        return res.status(500).json({ error: 'Failed to delete invoice' });
+      }
+
+      res.json({
+        success: true,
+        deletedInvoiceItems: result1.affectedRows,
+        deletedInvoice: result2.affectedRows
+      });
+    });
+  });
+})
 
 app.put('/invoices/:id', (req, res) => {
   const email = req.headers.email;
@@ -1136,15 +1188,14 @@ app.put('/invoices/:id', (req, res) => {
     amount,
     paid_on,
     payment_account,
-    items,
   } = req.body;
 
   const invoiceId = req.params.id;
-
+console.log(req.body)
   const updateInvoiceQuery = `
     UPDATE invoices SET 
       invoice_number = ?, customer_name = ?, date = ?, from_date = ?, to_date = ?, due_date = ?, 
-      status = ?, vat_percent = ?, amount = ?, paid_on = ?, payment_account = ?
+      status = ?, amount = ?, paid_on = ?, payment_account = ?
     WHERE id = ? and company_id = ${company_id}
   `;
 
@@ -1156,10 +1207,9 @@ app.put('/invoices/:id', (req, res) => {
     to_date,
     due_date,
     status,
-    vat_percent,
     amount,
-    paid_on || null,
-    status === 'paid' ? payment_account : null,
+    paid_on,
+    payment_account,
     invoiceId
   ], (err) => {
     if (err) return res.status(500).json({ error: err });
@@ -1180,8 +1230,8 @@ app.post('/api/expenses', (req, res) => {
 
   const { bill, items } = req.body;
   const billSql = `
-    INSERT INTO expense_bills (pl_date, vendor, reference, exp_cat, for_whom, payment_date,company_id)
-    VALUES (?, ?, ?, ?, ?, ?,?)
+    INSERT INTO expense_bills (pl_date, vendor, reference, exp_cat, for_whom, company_id)
+    VALUES (?, ?, ?, ?, ?, ?)
   `;
   const billValues = [
     bill.plDate,
@@ -1189,7 +1239,6 @@ app.post('/api/expenses', (req, res) => {
     bill.reference,
     bill.expcat,
     bill.forWhom,
-    bill.paymentDate,
     company_id
   ];
 
@@ -1307,7 +1356,7 @@ app.put('/api/expenses/:id', (req, res) => {
   // 1. Update the expense bill
   const updateBillQuery = `
     UPDATE expense_bills
-    SET pl_date = ?, vendor = ?, reference = ?, exp_cat = ?,for_whom = ?, payment_date = ?
+    SET pl_date = ?, vendor = ?, reference = ?, exp_cat = ?,for_whom = ?
     WHERE id = ? and company_id = ${company_id}
   `;
   const billValues = [
@@ -1316,7 +1365,6 @@ app.put('/api/expenses/:id', (req, res) => {
     bill.reference,
     bill.expcat,
     bill.forWhom || null,
-    bill.paymentDate,
     expenseId,
   ];
 

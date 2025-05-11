@@ -7,7 +7,44 @@ const getbankdata = (req, res) => {
   const token = req.headers.authorization.split(" ")[1];
 
     const i = req.params.ID;
-    const q = `SELECT * FROM bank where company_id = ${company_id}`
+    const q = `SELECT 
+    b.BankName,
+    b.accountHolder,
+    b.accountNumber,
+    b.IBAN,
+    b.Openingbalance,
+    IFNULL(e.expense_amount, 0) AS Expense_amount,
+    IFNULL(g.net_salary, 0) AS net_salary,    
+    IFNULL(b.Openingbalance, 0) - (IFNULL(e.expense_amount, 0) + IFNULL(g.net_salary, 0)) AS available_bal
+FROM 
+    bank b
+LEFT JOIN (
+    
+SELECT 
+    ep.paid_through,
+    SUM(ep.grosssalary) - SUM(IFNULL(d.total_deduction, 0)) AS net_salary
+FROM 
+    employee_payments ep
+LEFT JOIN (
+    SELECT empID, SUM(amt) AS total_deduction
+    FROM emp_monthly_deduction
+    GROUP BY empID
+) d ON ep.empID = d.empID
+GROUP BY 
+    ep.paid_through
+) g ON b.accountHolder = g.paid_through
+LEFT JOIN (
+    SELECT 
+        bank,
+        SUM(IFNULL(amount, 0) + IFNULL(vat, 0)) AS expense_amount
+    FROM 
+        expense_items
+    GROUP BY 
+        bank
+) e ON b.accountHolder = e.bank
+WHERE 
+    b.company_id = ${company_id};`
+    
     db.query(q,[i],(err,data)=>{
         if(err) return res.json(err)
         return res.json(data)

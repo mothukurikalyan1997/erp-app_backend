@@ -36,12 +36,11 @@ const postemp = (req, res) => {
       req.body.emp.employementtype,
       company_id
     ];
-    // console.log(req.body.emp.empfullname);
     console.log(values);
     const q = 'INSERT INTO employee (`empfullname`,`EmpID`,`mobile`,`emptype`,`eid`,`eidexp`,`email`,`ppnumber`,`ppexp`,`nationality`,`externalid`,`workingcompany`,`worklocation`,`workcity`,`locationid`,`joindate`,`trafficcode`,`license`,`licenseexp`,`bankname`,`bankac`,`iban`,`personcode`,`grosssalary`,`salarydistributiontype`,`employementtype`,`company_id`) VALUES (?)';
     db.query(q,[values],(err,data)=>{
         if(err) return res.json(err)
-        return res.json(data)
+        return console.log(data)
     })
   }
 

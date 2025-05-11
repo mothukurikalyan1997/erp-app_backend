@@ -19,9 +19,10 @@ const postsalary =(req, res) => {
       vv.salary.totalworkingdays || null,
       vv.salary.grosssalary || null,
       vv.salary.remark || null,
+      vv.salary.paid_through || null,
       company_id
     ];
-    const q = 'INSERT INTO employee_payments (`month`,`year`,`empID`,`empname`,`presentdays`,`offdays`,`sickleave`,`totalworkingdays`,`grosssalary`,`remark`,`company_id`) VALUES (?)';
+    const q = 'INSERT INTO employee_payments (`month`,`year`,`empID`,`empname`,`presentdays`,`offdays`,`sickleave`,`totalworkingdays`,`grosssalary`,`remark`,`paid_through`,`company_id`) VALUES (?)';
     db.query(q,[values],(err,data)=>{
         if(err) return res.json(err)
         return res.json(data)
@@ -60,8 +61,6 @@ LEFT JOIN
     AND e.month = ed.deductMonth
 WHERE 
   e.company_id = ${company_id} 
-  AND (ei.company_id = ${company_id} )
-  AND (ed.company_id = ${company_id} )
 GROUP BY 
   e.month,
   e.year,
