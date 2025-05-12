@@ -34,10 +34,27 @@ const app = express()
 app.use(express.json())
 
 // app.use(cors())
-app.use(cors({
-  origin: 'https://erp-app-frontend-f7ytdb5th-kalyan-mothukuris-projects.vercel.app',
-  credentials: true, // Only if using cookies/sessions
-}));
+// Define the allowed origins
+const allowedOrigins = [
+  'https://erp-app-frontend.vercel.app',
+  'https://erp-app-frontend-git-main-kalyan-mothukuris-projects.vercel.app',
+  'https://erp-app-frontend-f7ytdb5th-kalyan-mothukuris-projects.vercel.app',
+];
+
+// Set up CORS options
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'), false);
+    }
+  },
+};
+
+// Use the CORS middleware
+app.use(cors(corsOptions));
+
 app.use(bodyParser.json());
 
 app.use('/uploads', express.static('uploads'));
