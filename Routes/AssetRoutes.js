@@ -1,3 +1,6 @@
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
 const AssetController = require('../Controllers/AssetController')
 
 const express = require('express')
@@ -5,6 +8,7 @@ const express = require('express')
 const router = express.Router()
 
 router.post('/assetregister',AssetController.assetregister)
+router.post('/uploadasset',upload.single('excelFile'),AssetController.uploadasset)
 router.get('/assetdata',AssetController.getasetdata)
 router.get('/assetlog',AssetController.getasetlog)
 router.get('/assetactions/:id',AssetController.getsingleaset)

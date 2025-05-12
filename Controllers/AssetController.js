@@ -1,5 +1,6 @@
 const db = require('../DB/database')
-
+const multer = require('multer');
+const XLSX = require('xlsx');
 
 
 const assetregister = (req, res) => {
@@ -163,4 +164,69 @@ const damageassetdata = (req, res) => {
     })
   }
 
-module.exports = {assetregister,getasetdata,getasetlog,getsingleaset,updateasetlogs,postdamageaset,damageassetdata}
+const upload = multer({ storage: multer.memoryStorage() });
+
+const uploadasset = (req, res) => {
+  if (!req.file) return res.status(400).send('No file uploaded.');
+
+  try {
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: null });
+
+    // 🔧 Fix: Trim keys in each row
+    const rows = rawRows.map(row => {
+      const cleanRow = {};
+      for (const key in row) {
+        cleanRow[key.trim()] = row[key]; // remove leading/trailing spaces from headers
+      }
+      return cleanRow;
+    });
+
+    // Define columns in correct SQL order
+    const columns = [
+      "assettype", "assetduration", "assetid", "assetname", "buydate", "vendor",
+      "amount", "status", "AssignedTo", "company_id"
+    ];
+
+    const values = rows.map(row =>
+      columns.map(col => {
+        let val = row[col] ?? null;
+
+        // Handle Excel serial date values (numbers)
+        if (typeof val === 'number' && col.toLowerCase().includes('date')) {
+          const date = XLSX.SSF.parse_date_code(val);
+          if (date) {
+            const jsDate = new Date(Date.UTC(date.y, date.m - 1, date.d));
+            return jsDate.toISOString().slice(0, 10);
+          }
+        }
+
+        if (val instanceof Date) {
+          return val.toISOString().slice(0, 10);
+        }
+
+        return val;
+      })
+    );
+
+    const placeholders = values.map(() => `(${columns.map(() => '?').join(',')})`).join(',');
+    const flatValues = values.flat();
+
+    const sql = `INSERT INTO assets (${columns.join(',')}) VALUES ${placeholders}`;
+    
+    db.query(sql, flatValues, (err, result) => {
+      if (err) {
+        console.error('SQL Insert Error:', err);
+        return res.status(500).send('Failed to insert data into DB.');
+      }
+      res.send({ message: 'Data inserted successfully.', inserted: result.affectedRows });
+    });
+  } catch (err) {
+    console.error('Processing error:', err);
+    res.status(500).send('Error processing Excel file.');
+  }
+}
+
+module.exports = {assetregister,getasetdata,getasetlog,getsingleaset,updateasetlogs,postdamageaset,damageassetdata,uploadasset}

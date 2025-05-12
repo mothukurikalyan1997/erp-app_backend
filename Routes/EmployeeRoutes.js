@@ -1,10 +1,17 @@
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
 const employeeController = require('../Controllers/EmployeeController')
 
 const express = require('express')
 
 const router = express.Router()
 
+
+
+
 router.post('/employee',employeeController.postemp)
+router.post('/uploademployee',upload.single('excelFile'),employeeController.uploademployee)
 router.get('/empdata',employeeController.getempdata)
 router.get('/employeepenalty/:id',employeeController.getpenalty)
 router.post('/Penaltyregister',employeeController.penaltyreg)
