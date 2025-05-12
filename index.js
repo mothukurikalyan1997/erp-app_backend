@@ -34,7 +34,7 @@ const app = express()
 app.use(express.json())
 
 app.use(cors({
-  origin: 'https://erp-app-frontend-j27m9c4p9-kalyan-mothukuris-projects.vercel.app',
+  origin: 'https://erp-app-frontend-ng1dbw6hy-kalyan-mothukuris-projects.vercel.app',
   credentials: true, // Only if using cookies/sessions
 }));
 app.use(bodyParser.json());
