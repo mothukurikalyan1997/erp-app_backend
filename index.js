@@ -32,6 +32,7 @@ const secret = process.env.SECRET_KEY;
 
 const app = express()
 app.use(express.json())
+
 // app.use(cors())
 app.use(cors({
   origin: 'https://erp-app-frontend-f7ytdb5th-kalyan-mothukuris-projects.vercel.app',
