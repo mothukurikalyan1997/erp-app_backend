@@ -37,7 +37,7 @@ app.use(express.json())
 const allowedOrigins = [
   'https://erp-app-frontend.vercel.app',
   'https://erp-app-frontend-git-main-kalyan-mothukuris-projects.vercel.app',
-  'https://erp-app-frontend-photb34hy-kalyan-mothukuris-projects.vercel.app',
+  'erp-app-frontend-ftmntr6h3-kalyan-mothukuris-projects.vercel.app',
 ];
 
 // Set up CORS options
