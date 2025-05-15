@@ -33,11 +33,28 @@ const secret = process.env.SECRET_KEY;
 const app = express()
 app.use(express.json())
 
-// app.use(cors())
-app.use(cors({
-  origin: 'https://erp-app-frontend-f7ytdb5th-kalyan-mothukuris-projects.vercel.app',
-  credentials: true, // Only if using cookies/sessions
-}));
+// Define the allowed origins
+const allowedOrigins = [
+  'https://erp-app-frontend.vercel.app',
+  'https://erp-app-frontend-git-main-kalyan-mothukuris-projects.vercel.app',
+  'https://erp-app-frontend-photb34hy-kalyan-mothukuris-projects.vercel.app',
+];
+
+// Set up CORS options
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'), false);
+    }
+  },
+};
+
+// Use the CORS middleware
+app.use(cors(corsOptions));
+
+
 app.use(bodyParser.json());
 
 app.use('/uploads', express.static('uploads'));
@@ -1057,6 +1074,19 @@ app.post('/invoices', (req, res) => {
       })
     })
 
+    app.get("/userdata", (req, res) => {
+      const email = req.headers.email;
+      const role = req.headers.role;
+      const company_id = req.headers.company_id;
+      const token = req.headers.authorization.split(" ")[1];
+      
+      const q = `SELECT id, email, role, company_id FROM users`;
+      db.query(q,(err,data)=>{
+          if(err) return res.json(err)
+          return res.json(data)
+      })
+    })
+
 // ✅ Get all invoices
 // app.get('/get',(req, res) => {
 //   try {
@@ -1076,7 +1106,23 @@ app.get('/invoices/:id', (req, res) => {
 
 
   // Combined SQL query
-  const query = `SELECT * FROM invoices WHERE id = ? AND company_id = ?; SELECT * FROM invoice_items WHERE invoice_id = ? AND company_id = ?`;
+  const query = `SELECT 
+i.invoice_number,
+i.customer_name,
+i.date,
+i.from_date,
+i.to_date,
+i.due_date,
+i.status,
+i.amount,
+c.companyName,
+c.email,
+c.trn,
+c.City,
+c.State
+ FROM invoices i
+ left join consumer c on i.customer_name = c.displayName
+ WHERE i.id = ? AND i.company_id = ?; SELECT * FROM invoice_items WHERE invoice_id = ? AND company_id = ?`;
 
   // Execute both queries in one go using callback
   db.query(query, [id, company_id, id, company_id], (err, results) => {
@@ -1281,9 +1327,7 @@ FROM expense_bills eb
 LEFT JOIN expense_items ei ON eb.id = ei.bill_id
 where eb.company_id = ${company_id} and ei.company_id = ${company_id}
 GROUP BY 
-    eb.id,
-    eb.exp_cat,
-    ei.category;
+    eb.exp_cat;
   `;
   db.query(query, (err, results) => {
     if (err) {

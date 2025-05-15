@@ -14,7 +14,7 @@ router.get('/assetlog',AssetController.getasetlog)
 router.get('/assetactions/:id',AssetController.getsingleaset)
 router.post('/assetactions/:id',AssetController.updateasetlogs)
 router.post('/damageasset',AssetController.postdamageaset)
-router.get('/damageassetdata',AssetController.damageassetdata)
+router.get('/damageassetdata/:id',AssetController.damageassetdata)
 
 
 

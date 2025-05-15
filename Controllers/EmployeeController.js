@@ -53,7 +53,26 @@ const getempdata = (req, res) => {
   const company_id = req.headers.company_id;
   const token = req.headers.authorization.split(" ")[1];
 
-    const q = `SELECT * FROM employee where company_id = ${company_id}`;
+    const q = `select 
+e.EmpID,
+e.externalid,
+e.empfullname,
+e.mobile,
+e.workingcompany,
+e.worklocation,
+e.status,
+a.Assets
+from 
+employee e
+left join (
+select 
+AssignedTo,
+group_concat(assetid) as Assets
+from assets
+group by AssignedTo) a on e.EmpID = a.AssignedTo
+where company_id = ${company_id}
+group by 
+e.EmpID;`
     db.query(q,(err,data)=>{
         if(err) return res.json(err)
         return res.json(data)
@@ -185,12 +204,96 @@ const singleincidenthist = (req, res) => {
   const token = req.headers.authorization.split(" ")[1];
 
     const v = req.params.id;
-    const q = `SELECT * FROM employeeincidents WHERE EmpID = ? and company_id = ${company_id}`;
+    const q = `SELECT * FROM EmployeeIncidents WHERE EmpID = ? and company_id = ${company_id}`;
     db.query(q,[v],(err,data)=>{
         if(err) return res.json(err)
         return res.json(data)
     })
   }
+
+const singleempdata = (req, res) => {
+  const email = req.headers.email;
+  const role = req.headers.role;
+  const company_id = req.headers.company_id;
+  const token = req.headers.authorization.split(" ")[1];
+
+    const v = req.params.id;
+    const q = `SELECT * FROM employee WHERE EmpID = ? and company_id = ${company_id}`;
+    db.query(q,[v],(err,data)=>{
+        if(err) return res.json(err)
+        return res.json(data)
+    })
+  }
+
+const deleteinc = (req, res) => {
+  const email = req.headers.email;
+  const role = req.headers.role;
+  const company_id = req.headers.company_id;
+  const token = req.headers.authorization.split(" ")[1];
+
+    const v = req.params.id;
+    const vb = req.params.ids;
+    const q = `Delete FROM EmployeeIncidents WHERE EmpID = ? and id = ? and company_id = ${company_id}`;
+    db.query(q,[v,vb],(err,data)=>{
+        if(err) return res.json(err)
+        return res.json(data)
+    })
+  }
+
+const updateemp = (req, res) => {
+  const email = req.headers.email;
+  const role = req.headers.role;
+  const company_id = req.headers.company_id;
+  const token = req.headers.authorization.split(" ")[1];
+  const v = req.params.id;
+
+  const values = [
+    req.body.emp.empfullname || null,
+    req.body.emp.EmpID || null,
+    req.body.emp.mobile || null,
+    req.body.emp.emptype || null,
+    req.body.emp.eid || null,
+    req.body.emp.eidexp || null,
+    req.body.emp.email || null,
+    req.body.emp.ppnumber || null,
+    req.body.emp.ppexp || null,
+    req.body.emp.nationality || null,
+    req.body.emp.externalid || null,
+    req.body.emp.workingcompany || null,
+    req.body.emp.worklocation || null,
+    req.body.emp.workcity || null,
+    req.body.emp.locationid || null,
+    req.body.emp.joindate || null,
+    req.body.emp.trafficcode || null,
+    req.body.emp.license || null,
+    req.body.emp.licenseexp || null,
+    req.body.emp.bankname || null,
+    req.body.emp.bankac || null,
+    req.body.emp.iban || null,
+    req.body.emp.personcode || null,
+    req.body.emp.grosssalary || null,
+    req.body.emp.salarydistributiontype || null,
+    req.body.emp.employementtype || null,
+    req.body.emp.status || null,
+    v, // last value for WHERE clause
+    company_id // used again in WHERE
+  ];
+
+  const q = `
+    UPDATE employee SET 
+      empfullname = ?, EmpID = ?, mobile = ?, emptype = ?, eid = ?, eidexp = ?, 
+      email = ?, ppnumber = ?, ppexp = ?, nationality = ?, externalid = ?, 
+      workingcompany = ?, worklocation = ?, workcity = ?, locationid = ?, 
+      joindate = ?, trafficcode = ?, license = ?, licenseexp = ?, 
+      bankname = ?, bankac = ?, iban = ?, personcode = ?, 
+      grosssalary = ?, salarydistributiontype = ?, employementtype = ?, status = ?
+    WHERE EmpID = ? AND company_id = ?;
+  `;
+  db.query(q, values, (err, data) => {
+    if (err) return res.json(err);
+    return res.json({ message: 'Employee updated successfully', data });
+  });
+};
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -263,5 +366,5 @@ const uploademployee = (req, res) => {
 
   module.exports = {postemp,getempdata,
     getpenalty,penaltyreg,getpenaltyhist,single_Vacation_Hist,vacationhist,incidentregister,
-    singleincidenthist,uploademployee
+    singleincidenthist,uploademployee,deleteinc,singleempdata,updateemp
   }

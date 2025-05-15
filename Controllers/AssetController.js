@@ -139,8 +139,8 @@ const postdamageaset = (req, res) => {
   const token = req.headers.authorization.split(" ")[1];
 
     const vv = req.body;
-    const values = [vv.empID,vv.empfullname,vv.deductcat,vv.date,vv.dmginv,vv.amt,vv.remark,company_id];
-    const q = 'INSERT INTO emp_monthly_deduction (empID, empfullname, deductcat, date, dmginv, amt, remark,company_id) VALUES (?)';
+    const values = [vv.empID,vv.employeename,vv.deductcat,vv.date,vv.dmginv,vv.amt,vv.remark,company_id];
+    const q = 'INSERT INTO emp_monthly_deduction (empID, empFullName, deductcat, date, dmginv, amt, remark,company_id) VALUES (?)';
     
     db.query(q, [values], (err, result) => {
       if (err) {
@@ -155,9 +155,9 @@ const damageassetdata = (req, res) => {
   const company_id = req.headers.company_id;
   const token = req.headers.authorization.split(" ")[1];
 
-    // const v = req.params.id;
+    const v = req.params.id;
     // const q = "SELECT * FROM emp_monthly_deductions WHERE assetid = ?";
-    const q = `SELECT * FROM emp_monthly_deduction where company_id = ${company_id}`;
+    const q = `SELECT * FROM emp_monthly_deduction where company_id = ${company_id} and empID = ${v}`;
     db.query(q,(err,data)=>{
         if(err) return res.json(err)
         return res.json(data)
